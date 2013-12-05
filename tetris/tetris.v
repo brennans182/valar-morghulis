@@ -23,7 +23,7 @@
 `timescale 1ns / 100 ps
 
 module tetris( Reset, Clk, Start, Ack, Left, Right, Down, Rotate,
-	q_I, q_Gen, q_Rot, q_Col, q_Lose, blocks, score
+	q_I, q_Gen, q_Rot, q_Col, q_Lose, blocks, score, orientation, location
     );
 
 input Reset, Clk;
@@ -36,14 +36,14 @@ output q_Rot, q_Col, q_Lose;
 
 
 output reg [159:0] blocks;
-output reg [31:0] score;
+output reg [7:0] score;
 reg [7:0] state;
 
 // Current Block Information
-reg [7:0] location;
+output reg [7:0] location;
 reg [7:0] i;
 reg [2:0] block_type;
-reg [1:0] orientation;
+output reg [1:0] orientation;
 
 // Number of Loops for Rotate and Move
 reg [24:0] loop;
@@ -66,6 +66,30 @@ assign bar1_l = !blocks[location-1] && !blocks[location-9] && !blocks[location-1
 assign bar1_r = !blocks[location+1] && !blocks[location+9] && !blocks[location-7] && !blocks[location -15] && (location+1)%8;
 assign bar1_d = !blocks[location-24] && (location > 23);
 assign bar1_rot = !blocks[location +1] && !blocks[location-1] && !blocks[location-2] && (location+1)%8 && location%8;
+
+wire s0_l, s0_r, s0_d, s0_rot;
+assign s0_l = !blocks[location-1] && !blocks[location-10] && ((location)%8);
+assign s0_r = !blocks[location-2] && !blocks[location-7] && ((location+1)%8);
+assign s0_d = !blocks[location-7] && !blocks[location-16] && !blocks[location-17] && (location>16); 
+assign s0_rot = (location/8 != 19) && !blocks[location+8] && !blocks[location-7];
+
+wire s1_l, s1_r, s1_d, s1_rot;
+assign s1_l = !blocks[location-1] && !blocks[location+7] && !blocks[location-8] && ((location)%8);
+assign s1_r = !blocks[location+9] && !blocks[location+2] && !blocks[location-6] && ((location+1)%8);
+assign s1_d = !blocks[location-15] && !blocks[location-8] && (location>16); 
+assign s1_rot = !blocks[location-8] && !blocks[location-9];
+
+wire z0_l, z0_r, z0_d, z0_rot;
+assign z0_l = !blocks[location-9] && !blocks[location-2] && ((location)%8);
+assign z0_r = !blocks[location+1] && !blocks[location-6] && ((location+1)%8);
+assign z0_d = !blocks[location-9] && !blocks[location-16] && !blocks[location-15] && (location>16); 
+assign z0_rot = (location/8 != 19) && !blocks[location+1] && !blocks[location+9];
+
+wire z1_l, z1_r, z1_d, z1_rot;
+assign z1_l = !blocks[location-1] && !blocks[location+8] && !blocks[location-9] && ((location)%8);
+assign z1_r = !blocks[location+10] && !blocks[location+2] && !blocks[location-7] && ((location+1)%8);
+assign z1_d = !blocks[location-16] && !blocks[location-7] && (location>16); 
+assign z1_rot = !blocks[location-1] && !blocks[location-7];
 
 //for Row clear condition
 wire above_row, location_row, below_row, double_below_row;
@@ -130,7 +154,7 @@ always @ (posedge Clk, posedge Reset)
 		if(Reset)
 			begin 
 			state <= INITIAL;
-			loop <= 0'b000;
+			loop <= 25'd0;
 			for(i=0; i<160; i = i+1)
 				begin
 				blocks[i] = 0;
@@ -155,7 +179,7 @@ always @ (posedge Clk, posedge Reset)
 					end
 					score <= 0;
 					location <= 0;
-					block_type <= SQUARE; 
+					block_type <= BAR; 
 					orientation <= 2'b00;
 					
 					end
@@ -179,6 +203,7 @@ always @ (posedge Clk, posedge Reset)
 					
 					//State Actions
 					
+					orientation <= 2'b00;
 					if(block_type == SQUARE)
 						begin
 						blocks [154] <= 1;
@@ -238,7 +263,7 @@ always @ (posedge Clk, posedge Reset)
 						
 					if(block_type == BAR)
 						begin
-						if(Left && !orientation && bar0_l)
+						if(Left && !orientation[0] && bar0_l)
 							begin
 							blocks[location +1] <= 0;
 							blocks[location -3] <= 1;
@@ -248,6 +273,7 @@ always @ (posedge Clk, posedge Reset)
 							begin
 							blocks[location +2] <= 1;
 							blocks[location -2] <= 0;
+							location <= location+1;
 							end
 						else if(Down && !orientation && bar0_d)
 							begin
@@ -266,6 +292,10 @@ always @ (posedge Clk, posedge Reset)
 							blocks[location+8] <= 1;
 							blocks[location-8] <= 1;
 							blocks[location-16] <= 1;
+							blocks[location-2] <= 0;
+							blocks[location-1] <= 0;
+							blocks[location +1] <= 0;
+							orientation <= 2'b01;
 							end
 						else if(Left && orientation[0] && bar1_l)
 							begin
@@ -289,12 +319,13 @@ always @ (posedge Clk, posedge Reset)
 							blocks[location+1] <= 1; 
 							blocks[location -7] <= 1; 
 							blocks[location -15] <= 1;
-							location <= location -1;
+							location <= location +1;
 							end
 						else if(Down && orientation[0]  && bar1_d)
 							begin
 							blocks[location +8] <= 0;
 							blocks[location -24] <= 1;
+							location <= location -8;
 							end
 						else if(Rotate && orientation[0] && bar1_rot)
 							begin
@@ -304,6 +335,7 @@ always @ (posedge Clk, posedge Reset)
 							blocks[location+1] <= 1;
 							blocks[location-1] <= 1;
 							blocks[location-2] <= 1;
+							orientation <= 2'b00;
 							end
 							
 							
@@ -360,7 +392,7 @@ always @ (posedge Clk, posedge Reset)
 						end
 					else if(block_type == BAR)
 						begin
-						if( !orientation)
+						if( !orientation[0])
 							begin
 							if(bar0_d)
 								begin
@@ -395,6 +427,8 @@ always @ (posedge Clk, posedge Reset)
 								begin
 								blocks[location+8] <= 0;
 								blocks[location-24] <= 1;
+								location <= location -8;
+								loop <= 25'd0;
 								end
 							else
 								begin

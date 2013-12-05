@@ -16,7 +16,9 @@ wire [159:0] blocks_tb;
 	wire q_Gen_tb;
 	wire q_Rot_tb;
 	wire q_Col_tb;
-	
+	wire [7:0] score_tb;
+	wire [1:0] orientation_tb;
+	wire [7:0] location_tb;
 // Instantiate the DUT
 
 tetris dut ( 
@@ -31,7 +33,10 @@ tetris dut (
 	.q_Gen(q_Gen_tb),
 	.q_Rot(q_Rot_tb),
 	.q_Col(q_Col_tb),
-	.blocks(blocks_tb)
+	.blocks(blocks_tb),
+	.score(score_tb),
+	.orientation(orientation_tb),
+	.location(location_tb)
 	);
 	
 initial 
@@ -52,6 +57,7 @@ initial
 	Ack_tb = 0;
 	Left_tb = 0;
 	Right_tb = 0;
+	Down_tb = 0;
 	
 	@(posedge Clk_tb);
 	@(posedge Clk_tb);
@@ -78,29 +84,7 @@ initial
 		Left_tb = 0;
 		Right_tb = 1;
 	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
-	@(posedge Clk_tb);
+	
 	@(posedge Clk_tb);
 	@(posedge Clk_tb);
 	#1;
