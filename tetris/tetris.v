@@ -45,6 +45,8 @@ reg [7:0] i;
 reg [2:0] block_type;
 output reg [1:0] orientation;
 
+reg [2:0] next_block;
+
 // Number of Loops for Rotate and Move
 reg [24:0] loop;
 reg [2:0] random_count;
@@ -68,26 +70,26 @@ assign bar1_d = !blocks[location-24] && (location > 23);
 assign bar1_rot = !blocks[location +1] && !blocks[location-1] && !blocks[location-2] && (location+1)%8 && location%8;
 
 wire s0_l, s0_r, s0_d, s0_rot;
-assign s0_l = !blocks[location-1] && !blocks[location-10] && ((location)%8);
-assign s0_r = !blocks[location-2] && !blocks[location-7] && ((location+1)%8);
+assign s0_l = !blocks[location-1] && !blocks[location-10] && ((location-1)%8);
+assign s0_r = !blocks[location-2] && !blocks[location-7] && ((location+2)%8);
 assign s0_d = !blocks[location-7] && !blocks[location-16] && !blocks[location-17] && (location>16); 
 assign s0_rot = (location/8 != 19) && !blocks[location+8] && !blocks[location-7];
 
 wire s1_l, s1_r, s1_d, s1_rot;
 assign s1_l = !blocks[location-1] && !blocks[location+7] && !blocks[location-8] && ((location)%8);
-assign s1_r = !blocks[location+9] && !blocks[location+2] && !blocks[location-6] && ((location+1)%8);
+assign s1_r = !blocks[location+9] && !blocks[location+2] && !blocks[location-6] && ((location+2)%8);
 assign s1_d = !blocks[location-15] && !blocks[location-8] && (location>16); 
 assign s1_rot = !blocks[location-8] && !blocks[location-9];
 
 wire z0_l, z0_r, z0_d, z0_rot;
-assign z0_l = !blocks[location-9] && !blocks[location-2] && ((location)%8);
-assign z0_r = !blocks[location+1] && !blocks[location-6] && ((location+1)%8);
+assign z0_l = !blocks[location-9] && !blocks[location-2] && ((location-1)%8);
+assign z0_r = !blocks[location+1] && !blocks[location-6] && ((location+2)%8);
 assign z0_d = !blocks[location-9] && !blocks[location-16] && !blocks[location-15] && (location>16); 
 assign z0_rot = (location/8 != 19) && !blocks[location+1] && !blocks[location+9];
 
 wire z1_l, z1_r, z1_d, z1_rot;
 assign z1_l = !blocks[location-1] && !blocks[location+8] && !blocks[location-9] && ((location)%8);
-assign z1_r = !blocks[location+10] && !blocks[location+2] && !blocks[location-7] && ((location+1)%8);
+assign z1_r = !blocks[location+10] && !blocks[location+2] && !blocks[location-7] && ((location+2)%8);
 assign z1_d = !blocks[location-16] && !blocks[location-7] && (location>16); 
 assign z1_rot = !blocks[location-1] && !blocks[location-7];
 
@@ -120,6 +122,7 @@ localparam
 	ROTATE_PIECE = 8'b0000_0100,
 	COLLISION = 8'b0000_1000,
 	LOSE = 8'b0001_0000;
+	UNKNOWN = 8'bxxxx_xxxx;
 	
 //temp
 localparam
@@ -144,7 +147,7 @@ always @ (posedge Clk )
 		if(random_count >= 0'b110)
 			random_count <= 0;
 		else
-			random_count <= random_count+1;
+			random_count <= random_count+ 1'b1;
 	end
 	
 	
@@ -157,7 +160,7 @@ always @ (posedge Clk, posedge Reset)
 			loop <= 25'd0;
 			for(i=0; i<160; i = i+1)
 				begin
-				blocks[i] = 0;
+				blocks[i] <= 0;
 				end
 			score <= 0;
 			location <= 0;
@@ -165,6 +168,7 @@ always @ (posedge Clk, posedge Reset)
 		else
 			begin
 			case(state)
+			// rtl_synthesis full_case parallel_case
 				INITIAL : 
 					begin
 					if(Start)
@@ -175,51 +179,122 @@ always @ (posedge Clk, posedge Reset)
 					loop <= 25'd0;
 					for(i=0; i<160; i = i+1)
 					begin
-					blocks[i] = 0;
+					blocks[i] <= 0;
 					end
 					score <= 0;
 					location <= 0;
-					block_type <= BAR; 
+					block_type <= random_count %2; 
+					next_block <= random_count %2;
 					orientation <= 2'b00;
 					
 					end
 				GENERATE_PIECE :
 					begin
-					if(block_type == SQUARE)
+					if(next_block == SQUARE)
 						begin
 						if(blocks[154] || blocks[153] || blocks[146] || blocks[145]	)
 							state <= LOSE;
 						else
 							state <= ROTATE_PIECE;
 						end
-					else if(block_type == BAR)
+					else if(next_block == BAR)
 						begin
 						if(blocks[152] || blocks[153] || blocks[154] || blocks[155])
 							state <= LOSE;
 						else 
 							state <= ROTATE_PIECE;
 						end
+					else if(next_block == S)
+						begin
+						if(blocks[154] || blocks[155] || blocks[146] || blocks[145] )
+							state <= LOSE;
+						else
+							state <= ROTATE_PIECE;
+						end
+					else if(next_block == Z)
+						begin
+						if( blocks[154] || blocks[153] || blocks[146] || blocks[147] )
+							state <= LOSE;
+						else
+							state <= ROTATE_PIECE;
+						end
+					else if(next_block == L)
+						begin
+						if( blocks[154] || blocks[155] || blocks[153] || blocks[145])
+							state <= LOSE;
+						else
+							state <= ROTATE_PIECE;
+						end
+					else if(next_block == J)
+						begin
+						if( blocks[154] || blocks[153] || blocks[155] || blocks[147])
+							state <= LOSE;
+						else
+							state <= ROTATE_PIECE;
+						end
+					else if(next_block == T)
+						begin
+						if(blocks[154] || blocks[153] || blocks[155] || blocks[146])
+							state <= LOSE;
+						else
+							state <= ROTATE_PIECE;
+						end
 					
 					
 					//State Actions
-					
+					block_type <= next_block;
+					next_block <= random_count %2; //change for all blocks
 					orientation <= 2'b00;
-					if(block_type == SQUARE)
+					location <= 8'd154;
+					if(next_block == SQUARE)
 						begin
 						blocks [154] <= 1;
 						blocks[153] <= 1;
 						blocks[146]<= 1;
 						blocks[145] <= 1;
-						location <= 154;
 						end
-					else if( block_type == BAR)
+					else if( next_block == BAR)
 						begin 
 						blocks[152] <= 1;
 						blocks[153] <= 1;
 						blocks[154] <= 1;
 						blocks[155] <= 1;
-						location <= 154;
 						end
+					else if( next_block == S)			
+						begin
+						blocks[154] <= 1;
+						blocks[155] <= 1;
+						blocks[146] <= 1;
+						blocks[145] <= 1;
+						end
+					else if( next_block == Z)
+						begin
+						blocks[154] <= 1;
+						blocks[153] <= 1;
+						blocks[146] <= 1;
+						blocks[147] <= 1;						
+						end					
+					else if( next_block == L)		
+						begin
+						blocks[154] <= 1;
+						blocks[155] <= 1;
+						blocks[153] <= 1;
+						blocks[145] <= 1;
+						end					
+					else if( next_block == J)	
+						begin
+						blocks[154] <= 1;
+						blocks[153] <= 1;
+						blocks[155] <= 1;
+						blocks[147] <= 1;
+						end					
+					else if( next_block == T)	
+						begin
+						blocks[154] <= 1;
+						blocks[153] <= 1;
+						blocks[155] <= 1;
+						blocks[146] <= 1;
+						end					
 					end
 				ROTATE_PIECE :
 					begin
@@ -228,7 +303,7 @@ always @ (posedge Clk, posedge Reset)
 					else if(loop == loop_max)
 						state <= COLLISION;
 						
-					loop<= loop+1;
+					loop<= loop+ 1'b1;
 					
 					if(block_type == SQUARE)
 						begin					
@@ -238,7 +313,7 @@ always @ (posedge Clk, posedge Reset)
 							blocks[location-8] <= 0;
 							blocks[location-10] <= 1;
 							blocks[location -2] <= 1;
-							location <= location -1;
+							location <= location - 1'b1;
 							
 							end
 						else if( Right && square_r)
@@ -247,7 +322,7 @@ always @ (posedge Clk, posedge Reset)
 							blocks[location-9] <=0;							
 							blocks[location +1] <= 1;
 							blocks[location - 7] <= 1;
-							location <= location +1;
+							location <= location + 1'b1;
 						 
 							end
 						else if( Down && square_d)
@@ -256,24 +331,23 @@ always @ (posedge Clk, posedge Reset)
 							blocks[location-1] <= 0;							
 							blocks[location-16] <= 1;
 							blocks[location-17] <= 1;
-							location <= location -8;
+							location <= location - 4'd8;
 							loop<= 25'd0;
 							end
-						end
-						
-					if(block_type == BAR)
+						end						
+					else if(block_type == BAR)
 						begin
 						if(Left && !orientation[0] && bar0_l)
 							begin
 							blocks[location +1] <= 0;
 							blocks[location -3] <= 1;
-							location <= location -1;
+							location <= location - 1'b1;
 							end							
 						else if(Right && !orientation && bar0_r)
 							begin
 							blocks[location +2] <= 1;
 							blocks[location -2] <= 0;
-							location <= location+1;
+							location <= location+1'b1;
 							end
 						else if(Down && !orientation && bar0_d)
 							begin
@@ -285,7 +359,8 @@ always @ (posedge Clk, posedge Reset)
 							blocks[location-8] <= 1;
 							blocks[location-9] <= 1;
 							blocks[location-10] <= 1;
-							location <= location -8;
+							location <= location -4'd8;
+							loop<= 25'd0;
 							end
 						else if(Rotate && !orientation && bar0_rot)
 							begin
@@ -307,7 +382,7 @@ always @ (posedge Clk, posedge Reset)
 							blocks[location-1] <= 1; 
 							blocks[location -9] <= 1; 
 							blocks[location -17] <= 1;
-							location <= location -1;
+							location <= location - 1'b1;
 							end
 						else if(Right && orientation[0] && bar1_r)
 							begin
@@ -319,13 +394,14 @@ always @ (posedge Clk, posedge Reset)
 							blocks[location+1] <= 1; 
 							blocks[location -7] <= 1; 
 							blocks[location -15] <= 1;
-							location <= location +1;
+							location <= location +1'b1;
 							end
 						else if(Down && orientation[0]  && bar1_d)
 							begin
 							blocks[location +8] <= 0;
 							blocks[location -24] <= 1;
-							location <= location -8;
+							location <= location -4'd8;
+							loop<= 25'd0;
 							end
 						else if(Rotate && orientation[0] && bar1_rot)
 							begin
@@ -337,10 +413,70 @@ always @ (posedge Clk, posedge Reset)
 							blocks[location-2] <= 1;
 							orientation <= 2'b00;
 							end
-							
-							
 						end
-					
+					else if( block_type == S)
+						begin
+						if(!orientation[0])
+							begin
+							end
+						else if(orientation[0])
+							begin
+							end
+						end
+					else if( block_type == Z)
+						begin
+						if(!orientation[0])
+							begin
+							end
+						else if(orientation[0])
+							begin
+							end
+						end
+					else if( block_type == L)
+						begin
+						if(!orientation[0])
+							begin
+							end
+						else if(orientation[0])
+							begin
+							end
+						else if(orientation == 2'b10)
+							begin
+							end
+						else if(orientation == 2'b11)
+							begin
+							end
+						end
+					else if( block_type == J)
+						begin
+						if(!orientation[0])
+							begin
+							end
+						else if(orientation[0])
+							begin
+							end
+						else if(orientation == 2'b10)
+							begin
+							end
+						else if(orientation == 2'b11)
+							begin
+							end
+						end
+					else if( block_type == T)
+						begin
+						if(!orientation[0])
+							begin
+							end
+						else if(orientation[0])
+							begin
+							end
+						else if(orientation == 2'b10)
+							begin
+							end
+						else if(orientation == 2'b11)
+							begin
+							end
+						end					
 					end
 				COLLISION :
 					begin
@@ -363,7 +499,7 @@ always @ (posedge Clk, posedge Reset)
 							blocks[location-1] <= 0;							
 							blocks[location-16] <= 1;
 							blocks[location-17] <= 1;
-							location <= location -8;
+							location <= location - 4'd8;
 							loop<= 25'd0;
 							end
 						else 
@@ -376,7 +512,7 @@ always @ (posedge Clk, posedge Reset)
 									blocks[i] <= blocks[i+8] ;
 								end
 							blocks[159:150] <= empty_row;
-							score <= score +1;
+							score <= score +1'b1;
 							end	
 							if(below_row)
 								begin
@@ -386,7 +522,7 @@ always @ (posedge Clk, posedge Reset)
 										blocks[i] <= blocks[i+8] ;
 									end
 								blocks[159:150] <= empty_row;
-								score <= score +1;
+								score <= score +1'b1;
 								end
 							end
 						end
@@ -404,7 +540,7 @@ always @ (posedge Clk, posedge Reset)
 								blocks[location-8] <= 1;
 								blocks[location-9] <= 1;
 								blocks[location-10] <= 1;
-								location <= location -8;
+								location <= location -4'd8;
 								loop <= 25'd0;
 								end
 							else 
@@ -417,7 +553,7 @@ always @ (posedge Clk, posedge Reset)
 											blocks[i] <= blocks[i+8] ;
 										end
 									blocks[159:150] <= empty_row;
-									score <= score +1;
+									score <= score + 1'b1;
 									end									
 								end
 							end	
@@ -427,7 +563,7 @@ always @ (posedge Clk, posedge Reset)
 								begin
 								blocks[location+8] <= 0;
 								blocks[location-24] <= 1;
-								location <= location -8;
+								location <= location - 4'd8;
 								loop <= 25'd0;
 								end
 							else
@@ -440,7 +576,7 @@ always @ (posedge Clk, posedge Reset)
 											blocks[i] <= blocks[i+8] ;
 										end
 										blocks[159:150] <= empty_row;
-										score <= score +1;
+										score <= score + 1'b1;
 										end					
 								if( location_row)
 									begin
@@ -450,7 +586,7 @@ always @ (posedge Clk, posedge Reset)
 											blocks[i] <= blocks[i+8] ;
 										end
 									blocks[159:150] <= empty_row;
-									score <= score +1;
+									score <= score +1'b1;
 									end					
 								if( below_row)
 									begin
@@ -460,7 +596,7 @@ always @ (posedge Clk, posedge Reset)
 											blocks[i] <= blocks[i+8] ;
 										end
 									blocks[159:150] <= empty_row;
-									score <= score +1;
+									score <= score +1'b1;
 									end
 								if( double_below_row)
 									begin
@@ -470,7 +606,7 @@ always @ (posedge Clk, posedge Reset)
 											blocks[i] <= blocks[i+8] ;
 										end
 									blocks[159:150] <= empty_row;
-									score <= score +1;
+									score <= score +1'b1;
 									end
 								end					
 							end
@@ -481,8 +617,9 @@ always @ (posedge Clk, posedge Reset)
 					if(Ack)
 						state<= INITIAL;
 					else
-						state<= LOSE;					
+						state<= LOSE;							
 					end
+				default : state <= UNKNOWN;
 				endcase
 			end
 	end
