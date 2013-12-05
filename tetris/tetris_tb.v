@@ -8,12 +8,14 @@ reg Start_tb;
 reg Ack_tb;
 reg Left_tb;
 reg Right_tb;
-wire [199:0] blocks_tb;
+reg Down_tb;
+wire [159:0] blocks_tb;
 
 // Outputs
 	wire q_I_tb;
 	wire q_Gen_tb;
 	wire q_Rot_tb;
+	wire q_Col_tb;
 	
 // Instantiate the DUT
 
@@ -24,9 +26,11 @@ tetris dut (
 	.Ack(Ack_tb), 
 	.Left(Left_tb),
 	.Right(Right_tb),
+	.Down(Down_tb),
 	.q_I(q_I_tb),
 	.q_Gen(q_Gen_tb),
 	.q_Rot(q_Rot_tb),
+	.q_Col(q_Col_tb),
 	.blocks(blocks_tb)
 	);
 	
@@ -83,8 +87,24 @@ initial
 	@(posedge Clk_tb);
 	@(posedge Clk_tb);
 	@(posedge Clk_tb);
+	@(posedge Clk_tb);
+	@(posedge Clk_tb);
+	@(posedge Clk_tb);
+	@(posedge Clk_tb);
+	@(posedge Clk_tb);
+	@(posedge Clk_tb);
+	@(posedge Clk_tb);
+	@(posedge Clk_tb);
+	@(posedge Clk_tb);
+	@(posedge Clk_tb);
+	@(posedge Clk_tb);
+	@(posedge Clk_tb);
+	@(posedge Clk_tb);
+	@(posedge Clk_tb);
+	@(posedge Clk_tb);
+	@(posedge Clk_tb);
 	#1;
 		Right_tb = 0;
 	end
 	
-endmodule;
+endmodule
